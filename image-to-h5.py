@@ -11,7 +11,7 @@ import pillow_avif
 from torchvision.datasets import ImageFolder
 # from cnn_transformer_core_h5_v3 import batch_size
 
-batch_size = 64
+batch_size = 32
 
 # Define a function to convert a PyTorch DataLoader to H5 format
 def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
@@ -45,23 +45,44 @@ def dataloader_to_h5(loader, h5file, dataset_name, class_labels):
     except Exception as e:
         print(f"Error storing class labels as attributes in H5 file: {e}")
 
-# Image dimensions
-img_width = 272
-img_height = 272
-crop_size = 256
+# Padd input images to the minimal square frame
+def pad_to_square(img):
+    # Compute the difference between the longest and shortest side
+    w, h = img.size
+    diff = abs(h - w) // 2
 
-# Transformations for preprocessing
+    # Determine padding for height and width
+    pad_h = diff if h <= w else 0
+    pad_w = diff if w < h else 0
+
+    # Return a new padded PIL image
+    return transforms.functional.pad(img, (pad_w, pad_h, pad_w, pad_h))
+
+# Image dimensions
+image_size = (256,256)
+crop_size = (224,224)
+
+# Define the image transformations for training and validation data
 transform_train = transforms.Compose([
-    transforms.RandomRotation(30), # Apply a random rotation to the image within the range of -30 to +30 degrees
-    transforms.RandomHorizontalFlip(), # Randomly flip the image horizontally (left to right)
-    transforms.RandomAdjustSharpness(sharpness_factor=1.5), # Randomly adjust the sharpness of the image, making it 1.5 times sharper
-    transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5), # Randomly adjusts brightness, contrast, saturation, and hue.
-    transforms.Resize((img_width, img_height)),
+    transforms.RandomRotation(10),
+    transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio as suggested by GPT-4
+    transforms.Resize(image_size),
     transforms.RandomCrop(crop_size),
-    transforms.ToTensor(), # Convert the image to a PyTorch tensor
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]) # transformes color ranges from [0,1] to [-1,1]
+    # transforms.RandomResizedCrop(crop_size, scale=(0.8, 1.0)),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
-transform_validation = transform_train
+
+transform_validation = transforms.Compose([
+    transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio as suggested by GPT-4
+    transforms.Resize(crop_size),
+    # transforms.RandomCrop(crop_size),
+    # transforms.RandomResizedCrop(crop_size, scale=(0.8, 1.0)),
+    # transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
 
 # Define the root directory of your dataset
 train_data_root = r'images/train'

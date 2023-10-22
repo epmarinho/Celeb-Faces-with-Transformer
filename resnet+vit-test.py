@@ -1,5 +1,5 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: The code imports resnet_transformer_core to validate the pre-trained classification of astronomical images
+# About: The code imports resnet_plus_vit_transformer_core to validate the pre-trained classification of astronomical images
 # Creation: Aug 29, 2023
 
 import torch
@@ -13,7 +13,7 @@ from PIL import Image
 import pillow_avif
 from utils import Visualizer  # You should import your Visualizer module here
 import os
-from resnet_transformer_core import model as loaded_model
+from resnet_plus_vit_transformer_core import model as loaded_model
 
 # Load the saved model parameters
 saved_model_path = 'trained_resnet_model.pth'
@@ -26,15 +26,19 @@ loaded_model.to(device)
 # Set the model to evaluation mode
 loaded_model.eval()
 
-# # Transformations for preprocessing the input image - it might be different from transform within resnet_transformer_core
+# # Transformations for preprocessing the input image - it might be different from transform within resnet_plus_vit_transformer_core
 transform = transforms.Compose([
-    transforms.Resize((256, 256)),
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),                        # Convert the image to a PyTorch tensor
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
+    # transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize the image tensor
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 # Replace 'class_labels' with your actual class labels
-class_labels = ['galaxies', 'globular clusters', 'nebulae', 'open clusters']
+class_labels = ['Angelina Jolie', 'Brad Pitt', 'Denzel Washington', 'Hugh Jackman', 'Jennifer Lawrence',
+                'Johnny Depp', 'Kate Winslet', 'Leonardo DiCaprio', 'Megan Fox', 'Natalie Portman',
+                'Nicole Kidman', 'Robert Downey Jr', 'Sandra Bullock', 'Scarlett Johansson', 'Tom Cruise',
+                'Tom Hanks', 'Will Smith']
 
 # Path to the validation images directory
 validation_dir = 'images/tests'
