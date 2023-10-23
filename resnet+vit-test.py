@@ -36,7 +36,7 @@ transform = transforms.Compose([
 
 # Replace 'class_labels' with your actual class labels
 class_labels = ['Angelina Jolie', 'Brad Pitt', 'Denzel Washington', 'Hugh Jackman', 'Jennifer Lawrence',
-                'Johnny Depp', 'Kate Winslet', 'Kristen Bell', 'Leonardo DiCaprio', 'Megan Fox', 'Natalie Portman',
+                'Johnny Depp', 'Kate Winslet', 'Keira Knightley', 'Kristen Bell', 'Leonardo DiCaprio', 'Megan Fox', 'Natalie Portman',
                 'Nicole Kidman', 'Paris Hilton', 'Robert Downey Jr', 'Sandra Bullock', 'Scarlett Johansson', 'Tom Cruise',
                 'Tom Hanks', 'Will Smith']
 

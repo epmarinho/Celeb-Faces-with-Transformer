@@ -67,8 +67,8 @@ transform_train = transforms.Compose([
     transforms.RandomRotation(10),
     transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio as suggested by GPT-4
     transforms.Resize(image_size),
-    transforms.RandomCrop(crop_size),
-    # transforms.RandomResizedCrop(crop_size, scale=(0.8, 1.0)),
+    # transforms.RandomCrop(crop_size),
+    transforms.RandomResizedCrop(crop_size, scale=(0.8, 1.0)),
     transforms.RandomHorizontalFlip(p=0.5),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
