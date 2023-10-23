@@ -1,6 +1,6 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: The code imports resnet_plus_vit_transformer_core to allow Transformer+ResNet to classify astronomical images
-# Creation: Jul 12, 2023
+# About: The code imports resnet_plus_vit_transformer_core to allow Transformer+ResNet to classify celebrity images
+# Creation: October, 2023
 
 import torch
 import torch.nn as nn
@@ -24,7 +24,7 @@ import pillow_avif
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"PyTorch device: {device}")
 
-viz = Visualizer.Visualizer('Astro Classifier', use_incoming_socket=False)
+viz = Visualizer.Visualizer('Celebrity Classifier', use_incoming_socket=False)
 
 # Define the class weight vector empirically obtained from the last run:
 # run after the classes histogram:

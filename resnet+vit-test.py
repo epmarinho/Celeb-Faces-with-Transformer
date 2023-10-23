@@ -1,6 +1,6 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: The code imports resnet_plus_vit_transformer_core to validate the pre-trained classification of astronomical images
-# Creation: Aug 29, 2023
+# About: The code imports resnet_plus_vit_transformer_core to validate the pre-trained classification of celebrity images
+# Creation: October, 2023
 
 import torch
 import torch.nn as nn
@@ -36,8 +36,8 @@ transform = transforms.Compose([
 
 # Replace 'class_labels' with your actual class labels
 class_labels = ['Angelina Jolie', 'Brad Pitt', 'Denzel Washington', 'Hugh Jackman', 'Jennifer Lawrence',
-                'Johnny Depp', 'Kate Winslet', 'Leonardo DiCaprio', 'Megan Fox', 'Natalie Portman',
-                'Nicole Kidman', 'Robert Downey Jr', 'Sandra Bullock', 'Scarlett Johansson', 'Tom Cruise',
+                'Johnny Depp', 'Kate Winslet', 'Kristen Bell', 'Leonardo DiCaprio', 'Megan Fox', 'Natalie Portman',
+                'Nicole Kidman', 'Paris Hilton', 'Robert Downey Jr', 'Sandra Bullock', 'Scarlett Johansson', 'Tom Cruise',
                 'Tom Hanks', 'Will Smith']
 
 # Path to the validation images directory
