@@ -20,6 +20,7 @@ import torch.nn.init as init
 import numpy as np
 # from PIL import Image
 import pillow_avif
+import sys
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"PyTorch device: {device}")
