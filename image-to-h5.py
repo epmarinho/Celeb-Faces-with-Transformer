@@ -64,8 +64,8 @@ crop_size = (224,224)
 
 # Define the image transformations for training and validation data
 transform_train = transforms.Compose([
-    transforms.RandomRotation(10),
     transforms.Lambda(pad_to_square), # Apply padding to maintain aspect ratio as suggested by GPT-4
+    transforms.RandomRotation(10),
     transforms.Resize(image_size),
     # transforms.RandomCrop(crop_size),
     transforms.RandomResizedCrop(crop_size, scale=(0.8, 1.0)),
