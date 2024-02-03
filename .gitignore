@@ -164,3 +164,6 @@ cython_debug/
 trained_cnn_model.pth
 datasets.h5
 prof.nvvp
+Celeb-Faces-with-Transformer.kdev4
+.kdev4/
+trained_resnet_model.pth
