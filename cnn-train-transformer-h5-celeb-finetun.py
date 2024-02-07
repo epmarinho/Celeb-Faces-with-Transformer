@@ -307,14 +307,14 @@ def validate(model, dataloader):
 '''  **** Grid search loop ****  '''
 
 # Define the grid for hyperparameters
-step_sizes = [10]
-learning_rates = [5.5e-5]
-max_norms = [3]
-weight_decays = [6e-7]
+step_sizes = [100]
+learning_rates = [5.4e-5]
+max_norms = [3.5]
+weight_decays = [5e-7]
 fcdropouts = [.3]
 batch_sizes = [16]
-transformer_layers_options = [4, 2]
-num_dense_layers_options = [1, 0]
+transformer_layers_options = [6]
+num_dense_layers_options = [0]
 num_heads_options = [8]
 embedding_dimensions = [128]
 
@@ -340,8 +340,10 @@ for step_size in step_sizes:
     for learning_rate in learning_rates:
         print(f'learning rate = {learning_rate}')
         for max_norm in max_norms:
+            print(f'Max norm for gradients clipping = {max_norm}')
             for weight_decay in weight_decays:
                 for dropout in fcdropouts:
+                    print(f'FC droput = {dropout}')
                     # Inner loops for batch size variations. This affects memory usage, hence the careful handling.
                     for batch_size in batch_sizes:
                         print(f'batch size = {batch_size}')
@@ -441,7 +443,7 @@ for step_size in step_sizes:
 
 # Print out the best hyperparameter set and its performance
 print('\nBest Hyperparameters:')
-print(f'\nStep size = {best_hyperparameters[0]}')                       # 0
+print(f'Step size = {best_hyperparameters[0]}')                         # 0
 print(f'Learning rate = {best_hyperparameters[1]}')                     # 1
 print(f'Max norm for gradients clipping = {best_hyperparameters[2]}')   # 2
 print(f'weight decay = {best_hyperparameters[3]}')                      # 3

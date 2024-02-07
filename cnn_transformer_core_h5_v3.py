@@ -1,4 +1,4 @@
-""" Code name: cnn_transformer_core_h5_celeb.py (core code to be imported by the main code) """
+""" Code name: cnn_transformer_core_h5_v3.py (core code to be imported by the main code) """
 
 # Author: Eraldo Pereira Marinho, Ph.D.
 # Description: This code is a core module for building a VGG-like CNN with a transformer, initially designed for classifying astronomical images.
@@ -12,49 +12,54 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer, ReLU, PReLU
 import torchvision
 import torchvision.transforms as transforms
 # import torch.nn.functional as F
-import h5py
+#import h5py
 import torch.nn.init as init
 import os
 
-class Swish(nn.Module):
-    def __init__(self, beta=1.0):
-        super(Swish, self).__init__()
-        self.beta = beta
+## Swish unused yet
+#class Swish(nn.Module):
+    #def __init__(self, beta=1.0):
+        #super(Swish, self).__init__()
+        #self.beta = beta
 
-    def forward(self, x):
-        return x * torch.sigmoid(self.beta * x)
+    #def forward(self, x):
+        #return x * torch.sigmoid(self.beta * x)
 
-# Define how to load class labels from the H5 file
-def load_class_labels_from_h5(h5file_path, dataset_name):
-    with h5py.File(h5file_path, "r") as h5file:
-        class_labels = h5file.attrs[f"{dataset_name}_class_labels"]
-    return class_labels
+## Define how to load class labels from the H5 file
+#def load_class_labels_from_h5(h5file_path, dataset_name):
+    #with h5py.File(h5file_path, "r") as h5file:
+        #class_labels = h5file.attrs[f"{dataset_name}_class_labels"]
+    #return class_labels
 
-# Load class labels from the H5 file
-class_labels = load_class_labels_from_h5("datasets.h5", "train")
+## Load class labels from the H5 file
+#class_labels = load_class_labels_from_h5("datasets.h5", "train")
 
-# Function to load data and labels from H5 file
-def load_data_from_h5(h5file_path, dataset_name):
-    with h5py.File(h5file_path, "r") as h5file:
-        data = h5file[f"{dataset_name}_data"][:]
-        labels = h5file[f"{dataset_name}_labels"][:]
-    return data, labels
+## Function to load data and labels from H5 file
+#def load_data_from_h5(h5file_path, dataset_name):
+    #with h5py.File(h5file_path, "r") as h5file:
+        #data = h5file[f"{dataset_name}_data"][:]
+        #labels = h5file[f"{dataset_name}_labels"][:]
+    #return data, labels
 
-# Load training data and labels from H5 file
-train_data, train_labels = load_data_from_h5("datasets.h5", "train")
+## Load training data and labels from H5 file
+#train_data, train_labels = load_data_from_h5("datasets.h5", "train")
 
-# Load validation data and labels from H5 file
-validation_data, validation_labels = load_data_from_h5("datasets.h5", "validation")
+## Load validation data and labels from H5 file
+#validation_data, validation_labels = load_data_from_h5("datasets.h5", "validation")
 
-# Create PyTorch tensors from the loaded NumPy arrays
-train_data = torch.tensor(train_data)
-train_labels = torch.tensor(train_labels)
-validation_data = torch.tensor(validation_data)
-validation_labels = torch.tensor(validation_labels)
+## Create PyTorch tensors from the loaded NumPy arrays
+#train_data = torch.tensor(train_data)
+#train_labels = torch.tensor(train_labels)
+#validation_data = torch.tensor(validation_data)
+#validation_labels = torch.tensor(validation_labels)
 
-# Create custom PyTorch datasets
-train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
-validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
+## Create custom PyTorch datasets
+#train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
+#validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
+
+# Gets the number of classes from the dataset
+#num_classes = len(class_labels)
+
 
 # Define the CNN + Transformer model class
 class CNNTransformer(nn.Module):
@@ -63,8 +68,9 @@ class CNNTransformer(nn.Module):
                  num_heads = 16,
                  transformer_layers = 4, # Number of Transformer Encoder attention layers
                  num_dense_layers = 3,
+                 embedding_dimension = 128,
                  encoder_dropout = .01,
-                 embedding_dimension = 128
+                 num_classes = 4,
         ):
         super(CNNTransformer, self).__init__()
         self.cnn_model = cnn_model
@@ -77,13 +83,13 @@ class CNNTransformer(nn.Module):
                 dropout=encoder_dropout
             ),
             num_layers=transformer_layers,
-            enable_nested_tensor=False, # Suggested by GPT-4
+            enable_nested_tensor=False, # As suggested by GPT-4
         )
 
         # Adding dense layers for classification after the CNN Transformer
         input_size = embedding_dimension
         output_size_2 = input_size // 2** num_dense_layers
-        #assert output_size_2 > num_classes, f'Error: FC output size = {output_size_2} whereas number of classes = {num_classes}'
+        assert output_size_2 > num_classes, f'Error: FC output size = {output_size_2} whereas number of classes = {num_classes}'
         dense_layers = []
         for _ in range(num_dense_layers):
             output_size_1 = input_size // 2
@@ -129,7 +135,9 @@ class CNN(nn.Module):
                  cnn_out_dims,
                  dense_dims,
                  embedding_dimension = 128,
-                 dropout = 0.5):
+                 dropout = 0.5,
+                 num_classes = 4,
+                 ):
         super(CNN, self).__init__()
 
         self.cnn_out_dims = cnn_out_dims
@@ -142,7 +150,7 @@ class CNN(nn.Module):
 
             conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels, out_dim, kernel_size=3, stride=1, padding=1),
-                nn.BatchNorm2d(out_dim), # Batch normalization relies on the statistics of the batch, and with smaller batches, these statistics might not be a good estimate of the population statistics.
+                nn.BatchNorm2d(out_dim),
                 nn.PReLU(), # PReLU worked better than both ReLU and GELU
                 nn.MaxPool2d(kernel_size=2, stride=2)
             )
@@ -171,7 +179,7 @@ class CNN(nn.Module):
         self.embedding_layer = nn.Sequential(
             nn.Linear(in_dim, embedding_dimension),
             # nn.Dropout(p=dropout), # Dropout for FC output didn't work
-            nn.GELU() # Some improvement using GELU as activation for CNN output
+            nn.GELU() # Some improvement using GELU
         )
 
     def forward(self, x):
@@ -189,39 +197,7 @@ class CNN(nn.Module):
         for dense_layer in self.dense_layers:
             x = dense_layer(x)
 
-        # Passing the input 'x' through the embedding layer before sending it to the Transformer Encoder
+        # Embedding layer
         x = self.embedding_layer(x)
 
         return x
-
-## Setup the mini-batch size
-#batch_size = 16
-
-## Create data loaders
-#train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-#validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-
-## Gets the number of classes from the dataset
-num_classes = len(class_labels)
-
-## Transformer Encoder Parameters
-#embedding_dimension = 128 # Dimension of the feature space, which is an important dimension for encoder attention
-
-## dense_dims = [1024, 512, 256] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
-#fc_out_dim = embedding_dimension
-#dense_dims = [fc_out_dim * 4, fc_out_dim * 2, fc_out_dim] # List of output dimensions for dense layers # The best for unsorted astronomical image classification
-## Instantiate the CNN + Dense layer + Transformer
-## cnn_out_dims = [128, 256, 512, 1024] # List of output dimensions for convolutional layers # The best for unsorted astronomical image classification
-#cnn_out_dim = 2 * dense_dims[0]
-#cnn_out_dims = [cnn_out_dim // 8, cnn_out_dim // 4, cnn_out_dim // 2, cnn_out_dim] # List of output dimensions for convolutional layers
-
-#print(f'\nEncoder attention embedding dimension = {embedding_dimension}')
-#print(f'Convolutional layers = {cnn_out_dims}')
-#print(f'Full connected laysers = {dense_dims}\n')
-
-#cnn_model = CNN(cnn_out_dims, dense_dims)
-## model = CNNTransformer(cnn_model, num_heads = 16, transformer_layers = 2, num_dense_layers = 2) # The best for unsorted astronomical image classification
-#transformer_layers = 2
-#num_dense_layers = 0
-#num_heads = 4
-#model = CNNTransformer(cnn_model, num_heads=num_heads, transformer_layers=transformer_layers, num_dense_layers=num_dense_layers)
