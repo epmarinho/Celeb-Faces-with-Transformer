@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import torchvision
+import torchvision.models as models
 # import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
@@ -155,7 +156,36 @@ print(f'Preset number of classes = {num_classes}')
 # Instantiate the CNN + Dense layer + Transformer
 cnn_model = CNN(cnn_out_dims, dense_dims, embedding_dimension, dropout=0.3, num_classes=num_classes)
 # Instantiate the composed CNN+Transformer network
-model = CNNTransformer(cnn_model, num_heads=8, transformer_layers=6, num_dense_layers=0, embedding_dimension=embedding_dimension, num_classes=num_classes)
+modelCNNTransformer = CNNTransformer(cnn_model, num_heads=8, transformer_layers=6, num_dense_layers=0, embedding_dimension=embedding_dimension, num_classes=num_classes)
+
+import torchvision.models as models
+
+# Load pre-trained models
+resnet50 = models.resnet50(weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V1)
+#vit = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224")
+
+# Modify the final classification head for ViT
+#vit.classifier = nn.Linear(vit.config.hidden_size, num_classes)
+
+# Combine the models
+class CelebrityClassifier(nn.Module):
+    def __init__(self, resnet, cnntransformer, num_classes):
+        super(CelebrityClassifier, self).__init__()
+        self.resnet = resnet
+        self.cnntransformer = cnntransformer
+        self.fc = nn.Linear(1000 + num_classes, num_classes)
+
+    def forward(self, x):
+        resnet_features = self.resnet(x)
+        #cnntransformer_output = self.cnntransformer(x)['logits']
+        cnntransformer_output = self.cnntransformer(x)
+
+        # Combine features or outputs along the second dimension (dim=1)
+        combined_output = torch.cat((resnet_features, cnntransformer_output), dim=1)
+
+        return self.fc(combined_output)
+
+model = CelebrityClassifier(resnet50, modelCNNTransformer, num_classes)
 
 # Training parameters
 

@@ -3,6 +3,7 @@
 # Creation: October, 2023
 
 import torch
+import torch_tensorrt
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 import torchvision
 # import torchvision.transforms as transforms
+from tensorflow.python.compiler.tensorrt import trt_convert as trt
 import visdom
 from utils import Visualizer
 from resnet_plus_vit_transformer_core import model
