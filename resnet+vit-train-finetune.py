@@ -19,10 +19,10 @@ from torch.optim import lr_scheduler
 import torchvision
 import visdom
 from utils import Visualizer
-from resnet_plus_vit_core import class_labels
-from resnet_plus_vit_core import train_dataset
-from resnet_plus_vit_core import validation_dataset
-from resnet_plus_vit_core import CelebrityClassifier, model, vit, resnet50
+from resnet_vit_finetune import class_labels
+from resnet_vit_finetune import train_dataset
+from resnet_vit_finetune import validation_dataset
+from resnet_vit_finetune import CelebrityClassifier, model, vit, resnet50
 import os
 import torch.nn.init as init
 import numpy as np
@@ -308,10 +308,10 @@ def validate(model, dataloader):
         specificity.append(specificity_i)
 
     print(f'Validation Loss: {validation_loss:.6f}, Validation Accuracy: {accuracy:.2f}%')
-    print(f'Precision per class: {precision}')
-    print(f'Recall per class: {recall}')
-    print(f'F1-score per class: {f1_scores}')
-    print(f'Specificity per class: {specificity}')
+    #print(f'Precision per class: {precision}')
+    #print(f'Recall per class: {recall}')
+    #print(f'F1-score per class: {f1_scores}')
+    #print(f'Specificity per class: {specificity}')
     viz.plot_lines('Validation Loss', validation_loss)
     viz.plot_lines('Validation Accuracy', accuracy)
     viz.plot_lines('Precision', precision)
@@ -321,35 +321,115 @@ def validate(model, dataloader):
 
     return validation_loss, accuracy
 
-learning_rate = 5e-5
-max_norm = 2.0
-batch_size = 16
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-# Ensuring reproducibility by setting a fixed seed and deterministic behavior.
-torch.manual_seed(3908274)
-torch.backends.cudnn.deterministic = True
+'''  **** Grid search loop ****  '''
 
-# Initialize model weights and move the model to the GPU.
-model = CelebrityClassifier(resnet50, vit, num_classes)
-#model.apply(reset_model)
+# Define the grid for hyperparameters
+step_sizes = [7, 5, 3]
+learning_rates = [6e-5]
+max_norms = [2.0]
+weight_decays = [2e-7]
+batch_sizes = [16]
 
-model.to(device)
+print(f'\nStep sizes = {step_sizes}')
+print(f'learning rates = {learning_rates}')
+print(f'max norms for gradients clipping = {max_norms}')
+print(f'weight_decays = {weight_decays}')
+print(f'batch sizes = {batch_sizes}\n')
 
-# Set up the loss function and optimizer with hyperparameters.
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-7)
+best_accuracy = 0  # Track the best accuracy
+best_hyperparameters = None  # Track the best hyperparameters
 
-# Configure schedulers for dynamic learning rate adjustment.
-scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
-scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
-scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
-# Set up early stopping mechanisms based on different performance metrics.
-early_stopping_batch = EarlyStoppingBatch(patience=40)
-early_stopping_valloss = EarlyStoppingValLoss(patience=10)
-early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
+''' Here it is defined the training grid for the parameter sets above '''
 
-# Training and validation loop with exception handling for memory issues.
-train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
+has_started = False
+# Outer loops for hyperparameter tuning. Each loop iterates over a range of values for a specific hyperparameter.
+for step_size in step_sizes:
+    print(f'step size = {step_size}')
+    for learning_rate in learning_rates:
+        print(f'learning rate = {learning_rate}')
+        for max_norm in max_norms:
+            print(f'Max norm for gradients clipping = {max_norm}')
+            for weight_decay in weight_decays:
+                print(f'Weight decay = {weight_decay}')
+                # Inner loops for batch size variations. This affects memory usage, hence the careful handling.
+                for batch_size in batch_sizes:
+                    print(f'batch size = {batch_size}')
+                    # Initialize data loaders with the current batch size for training and validation datasets.
+                    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+                    validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+                    # Reset visualization environment and metrics for each configuration.
+                    if has_started:
+                        vis.delete_env('Astro Classifier')
+                        vis.close()
+                        viz.reset_x_axis('Batch Loss')
+                        viz.reset_x_axis('Validation Loss')
+                        viz.reset_x_axis('Validation Accuracy')
+                        viz.reset_x_axis('Precision')
+                        viz.reset_x_axis('Recall')
+                        viz.reset_x_axis('F1-scores')
+                        viz.reset_x_axis('Specificity')
+                    else:
+                        has_started = True
+
+                    # Ensuring reproducibility by setting a fixed seed and deterministic behavior.
+                    torch.manual_seed(3908274)
+                    torch.backends.cudnn.deterministic = True
+
+                    # Initialize model weights and move the model to the GPU.
+                    model = CelebrityClassifier(resnet50, vit, num_classes)
+                    #model.apply(reset_model)
+
+                    # Save the initial state
+                    initial_state_dict = model.state_dict()
+
+                    model.to(device)
+
+                    # Set up the loss function and optimizer with hyperparameters.
+                    criterion = nn.CrossEntropyLoss()
+                    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+
+                    # Configure schedulers for dynamic learning rate adjustment.
+                    scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5)
+                    scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
+                    scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+
+                    # Set up early stopping mechanisms based on different performance metrics.
+                    early_stopping_batch = EarlyStoppingBatch(patience=40)
+                    early_stopping_valloss = EarlyStoppingValLoss(patience=10)
+                    early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
+
+                    # Training and validation loop with exception handling for memory issues.
+                    try:
+                        train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
+                    except RuntimeError as err:
+                        if 'out of memory' in str(err):
+                            print(f'WARNING: Out of {device} memory. Skipping grid element')
+                            # Handle the out-of-memory issue here, e.g., by reducing batch size or skipping
+                            continue
+                        else:
+                            raise err  # Re-raise the exception if it's not a memory error
+
+                    # Evaluate the model and update best_hyperparameters if this model performs the best.
+                    _, current_accuracy = validate(model, validation_dataloader)
+                    if current_accuracy > best_accuracy:
+                        best_accuracy = current_accuracy
+                        best_hyperparameters = (step_size, learning_rate, max_norm, weight_decay, batch_size)
+                        #                           0            1           2             3          4
+                        print(f'\nBest accuracy by now = {best_accuracy}\n')
+
+                    # Later, to reset the model to the saved state:
+                    model.load_state_dict(initial_state_dict)
+
+# End of all hyperparameter tuning loops.
+
+# Print out the best hyperparameter set and its performance
+print('\nBest Hyperparameters:')
+print(f'Step size = {best_hyperparameters[0]}')                         # 0
+print(f'Learning rate = {best_hyperparameters[1]}')                     # 1
+print(f'Max norm for gradients clipping = {best_hyperparameters[2]}')   # 2
+print(f'weight decay = {best_hyperparameters[3]}')                      # 3
+print(f'Batch Size = {best_hyperparameters[4]}')                        # 4
+
+print(f'\nBest Accuracy: {best_accuracy}\n')

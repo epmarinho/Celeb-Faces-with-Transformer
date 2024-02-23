@@ -55,12 +55,12 @@ validation_labels = torch.tensor(validation_labels)
 train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
 validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
 
-# Setup the mini-batch size
-batch_size = 8
+## Setup the mini-batch size
+#batch_size = 8
 
-# Create data loaders
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+## Create data loaders
+#train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+#validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
 # Gets the number of classes from the dataset
 num_classes = len(class_labels)
