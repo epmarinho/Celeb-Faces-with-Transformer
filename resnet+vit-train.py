@@ -321,15 +321,39 @@ def validate(model, dataloader):
 
     return validation_loss, accuracy
 
+step_size = 10
 learning_rate = 5e-5
 max_norm = 2.0
+weight_decay = 1e-7
 batch_size = 16
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+non_deterministic = True
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=non_deterministic)
 validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
+# Check if the pretrained file exists
+model_checkpoint = "trained_resnet_model.pth"
+if os.path.exists(model_checkpoint):
+    # Load pretrained weights
+    checkpoint = torch.load(model_checkpoint)
+    model.load_state_dict(checkpoint)
+    print(f"Pretrained weights \"{model_checkpoint}\" found.")
+else:
+    print("No pretrained weights file found. Initializing with PyTorch default weights.")
+#     # He initialization in PyTorch
+#     # Access all the linear layers (fully connected)
+#     # Ensure the model contains only layers that should be initialized with He
+#     # for layer in model.children():
+#     #     if isinstance(layer, nn.Linear):
+#     #         init.kaiming_normal_(layer.weight)
+
+# # Check the loaded weights
+# print(model.state_dict())
+
+
 # Ensuring reproducibility by setting a fixed seed and deterministic behavior.
-torch.manual_seed(3908274)
-torch.backends.cudnn.deterministic = True
+if not non_deterministic:
+    torch.manual_seed(3908274)
+torch.backends.cudnn.deterministic = not non_deterministic
 
 # Initialize model weights and move the model to the GPU.
 model = CelebrityClassifier(resnet50, vit, num_classes)
@@ -339,10 +363,10 @@ model.to(device)
 
 # Set up the loss function and optimizer with hyperparameters.
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-7)
+optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
 # Configure schedulers for dynamic learning rate adjustment.
-scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5)
 scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
 scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
@@ -353,3 +377,17 @@ early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
 
 # Training and validation loop with exception handling for memory issues.
 train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
+
+# Save the trained weights
+saved_model_path = 'trained_resnet_model.pth'
+torch.save(model.state_dict(), saved_model_path)
+# print(f"model.state_dict '{model.state_dict()}'")
+print(f"Trained model saved to '{saved_model_path}'")
+# # Load pretrained weights
+# checkpoint = torch.load(model_checkpoint)
+# model.load_state_dict(checkpoint)
+# print("Pretrained weights loaded successfully.")
+# # Check the loaded weights
+# torch.save(model.state_dict(), 'pesos_lidos.pth')
+# torch.save(model.state_dict(), 'trained_resnet_model.pth')
+
