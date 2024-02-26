@@ -203,7 +203,7 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
         scheduler.step()
 
         epoch_loss = running_loss / len(dataloader.dataset)
-        print(f'\nEpoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}\n')
+        print(f'\nEpoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.6f}')
         viz.plot_lines('Batch Loss', epoch_loss)
 
         early_stopping_batch.update_history(epoch_loss)
@@ -325,10 +325,10 @@ def validate(model, dataloader):
 '''  **** Grid search loop ****  '''
 
 # Define the grid for hyperparameters
-step_sizes = [7, 5, 3]
-learning_rates = [6e-5]
+step_sizes = [10]
+learning_rates = [5e-5]
 max_norms = [2.0]
-weight_decays = [2e-7]
+weight_decays = [1e-7]
 batch_sizes = [16]
 
 print(f'\nStep sizes = {step_sizes}')

@@ -167,3 +167,4 @@ prof.nvvp
 Celeb-Faces-with-Transformer.kdev4
 .kdev4/
 trained_resnet_model.pth
+resnet+vit-train.util

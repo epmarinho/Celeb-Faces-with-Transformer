@@ -61,7 +61,7 @@ vis = visdom.Visdom()
 #class_weights = class_weights.to(device)
 
 # Ensuring reproducibility by setting a fixed seed and deterministic behavior.
-non_deterministic = False
+non_deterministic = True
 if not non_deterministic:
     torch.manual_seed(3908274)
     print('\nDeterministic training/learning\n')
@@ -222,14 +222,14 @@ def train_and_validate(model, dataloader, validation_loader, criterion, optimize
 
         validation_loss, accuracy = validate(model, validation_loader)
 
-        scheduler_by_valloss.step(validation_loss)
+        #scheduler_by_valloss.step(validation_loss)
 
         early_stopping_valloss.update_history(validation_loss)
         if early_stopping_valloss.should_stop():
             print(f'\nEarly stopping triggered at epoch {epoch + 1} for validation loss = {validation_loss}\n')
             break
 
-        scheduler_by_accuracy.step(accuracy)
+        #scheduler_by_accuracy.step(accuracy)
 
         early_stopping_accuracy.update_history(accuracy)
         if early_stopping_accuracy.should_stop():
@@ -338,9 +338,6 @@ batch_size = 16
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=non_deterministic)
 validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-# Instanciate the network model
-model = CelebrityClassifier(resnet50, vit, num_classes)
-
 # Check if the pretrained file exists
 model_checkpoint = "trained_resnet_model.pth"
 if os.path.exists(model_checkpoint):
@@ -357,6 +354,9 @@ else:
 #     #     if isinstance(layer, nn.Linear):
 #     #         init.kaiming_normal_(layer.weight)
 
+    # Instanciate the network model
+    model = CelebrityClassifier(resnet50, vit, num_classes)
+
 ## Check the loaded weights
 #print(model.state_dict())
 
@@ -367,10 +367,10 @@ model.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
-# Configure schedulers for dynamic learning rate adjustment.
+# Configure schedulers for dynamic learning rate adjustment.Fseed
 scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5)
-scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
-scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+#scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
+#scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
 # Set up early stopping mechanisms based on different performance metrics.
 early_stopping_batch = EarlyStoppingBatch(patience=40)
