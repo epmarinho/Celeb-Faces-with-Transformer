@@ -60,6 +60,15 @@ vis = visdom.Visdom()
 ## Weights tensor must be converted to the adopted device
 #class_weights = class_weights.to(device)
 
+# Ensuring reproducibility by setting a fixed seed and deterministic behavior.
+non_deterministic = False
+if not non_deterministic:
+    torch.manual_seed(3908274)
+    print('\nDeterministic training/learning\n')
+else:
+    print('\nNondeterministic training/learning\n')
+torch.backends.cudnn.deterministic = not non_deterministic
+
 def init_weights(m):
     """ As we say in portuguese, "Isso está uma lambança!" """
     #if isinstance(m, nn.Conv2d):
@@ -326,9 +335,11 @@ learning_rate = 5e-5
 max_norm = 2.0
 weight_decay = 1e-7
 batch_size = 16
-non_deterministic = True
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=non_deterministic)
 validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
+# Instanciate the network model
+model = CelebrityClassifier(resnet50, vit, num_classes)
 
 # Check if the pretrained file exists
 model_checkpoint = "trained_resnet_model.pth"
@@ -346,19 +357,10 @@ else:
 #     #     if isinstance(layer, nn.Linear):
 #     #         init.kaiming_normal_(layer.weight)
 
-# # Check the loaded weights
-# print(model.state_dict())
+## Check the loaded weights
+#print(model.state_dict())
 
-
-# Ensuring reproducibility by setting a fixed seed and deterministic behavior.
-if not non_deterministic:
-    torch.manual_seed(3908274)
-torch.backends.cudnn.deterministic = not non_deterministic
-
-# Initialize model weights and move the model to the GPU.
-model = CelebrityClassifier(resnet50, vit, num_classes)
-#model.apply(reset_model)
-
+# Move the model to the GPU.
 model.to(device)
 
 # Set up the loss function and optimizer with hyperparameters.
@@ -378,6 +380,9 @@ early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
 # Training and validation loop with exception handling for memory issues.
 train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
 
+# Validate the ResNet+Transformer
+validate(model, validation_dataloader)
+
 # Save the trained weights
 saved_model_path = 'trained_resnet_model.pth'
 torch.save(model.state_dict(), saved_model_path)
@@ -390,4 +395,3 @@ print(f"Trained model saved to '{saved_model_path}'")
 # # Check the loaded weights
 # torch.save(model.state_dict(), 'pesos_lidos.pth')
 # torch.save(model.state_dict(), 'trained_resnet_model.pth')
-
