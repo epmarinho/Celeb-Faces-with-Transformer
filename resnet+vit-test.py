@@ -1,5 +1,5 @@
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: The code imports resnet_plus_vit_transformer_core to validate the pre-trained classification of celebrity images
+# About: The code imports resnet_plus_vit_core to validate the pre-trained classification of celebrity images
 # Creation: October, 2023
 
 import torch
@@ -13,7 +13,7 @@ from PIL import Image
 import pillow_avif
 from utils import Visualizer  # You should import your Visualizer module here
 import os
-from resnet_plus_vit_transformer_core import model as loaded_model
+from resnet_plus_vit_core import model as loaded_model
 
 # Load the saved model parameters
 saved_model_path = 'trained_resnet_model.pth'
@@ -26,7 +26,7 @@ loaded_model.to(device)
 # Set the model to evaluation mode
 loaded_model.eval()
 
-# # Transformations for preprocessing the input image - it might be different from transform within resnet_plus_vit_transformer_core
+# # Transformations for preprocessing the input image - it might be different from transform within resnet_plus_vit_core
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),                        # Convert the image to a PyTorch tensor

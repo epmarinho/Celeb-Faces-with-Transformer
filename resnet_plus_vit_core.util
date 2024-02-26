@@ -56,7 +56,7 @@ train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
 validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
 
 # Setup the mini-batch size
-batch_size = 8
+batch_size = 16
 
 # Create data loaders
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
