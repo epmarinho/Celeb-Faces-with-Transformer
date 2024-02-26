@@ -56,7 +56,7 @@ train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
 validation_dataset = torch.utils.data.TensorDataset(validation_data, validation_labels)
 
 # Setup the mini-batch size
-batch_size = 16
+batch_size = 8
 
 # Create data loaders
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -68,29 +68,45 @@ print(f'Number of classes is {num_classes}')
 
 # Load pre-trained models
 resnet50 = models.resnet50(weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V1)
-vit = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224")
 
-# Modify the final classification head for ViT
-vit.classifier = nn.Linear(vit.config.hidden_size, num_classes)
-
-# Combine the models
-class CelebrityClassifier(nn.Module):
-    def __init__(self, resnet, vit, num_classes):
-        super(CelebrityClassifier, self).__init__()
+class ResNetClassifier(nn.Module):
+    def __init__(self, resnet, num_classes):
+        super(ResNetClassifier, self).__init__()
         self.resnet = resnet
-        self.vit = vit
-        self.fc = nn.Linear(1000 + num_classes, num_classes)
+        # Modify the last fully connected layer of ResNet to match the number of classes
+        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_classes)
 
     def forward(self, x):
-        resnet_features = self.resnet(x)
-        vit_output = self.vit(x)['logits']
+        # Use the modified ResNet model directly
+        return self.resnet(x)
 
-        # Combine features or outputs along the second dimension (dim=1)
-        combined_output = torch.cat((resnet_features, vit_output), dim=1)
 
-        return self.fc(combined_output)
+#vit = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224")
 
-model = CelebrityClassifier(resnet50, vit, num_classes)
+## Modify the final classification head for ViT
+#vit.classifier = nn.Linear(vit.config.hidden_size, num_classes)
+
+## Combine the models
+#class CelebrityClassifier(nn.Module):
+    #def __init__(self, resnet, vit, num_classes):
+        #super(CelebrityClassifier, self).__init__()
+        #self.resnet = resnet
+        #self.vit = vit
+        #self.fc = nn.Linear(1000 + num_classes, num_classes)
+
+    #def forward(self, x):
+        #resnet_features = self.resnet(x)
+        #vit_output = self.vit(x)['logits']
+
+        ## Combine features or outputs along the second dimension (dim=1)
+        #combined_output = torch.cat((resnet_features, vit_output), dim=1)
+
+        #return self.fc(combined_output)
+
+# Create an instance of the ResNetClassifier with the modified ResNet model
+model = ResNetClassifier(resnet50, num_classes)
+
+#model = CelebrityClassifier(resnet50, vit, num_classes)
 
 # # Define the ResNet + Transformer model class
 # class ResNetTransformer(nn.Module):

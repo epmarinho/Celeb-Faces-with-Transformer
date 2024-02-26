@@ -80,8 +80,8 @@ else:
 # # Check the loaded weights
 # print(model.state_dict())
 
-# Move the model to the GPU device
-model.to(device)
+## Move the model to the GPU device
+#model.to(device)
 
 # These are basically my earling stopping proposed in previously unpublished works
 class EarlyStoppingBatch:

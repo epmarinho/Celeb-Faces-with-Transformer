@@ -326,9 +326,9 @@ def validate(model, dataloader):
 
 # Define the grid for hyperparameters
 step_sizes = [10]
-learning_rates = [5e-5]
-max_norms = [2.0]
-weight_decays = [1e-7]
+learning_rates = [5e-5, 4e-5]
+max_norms = [2.0, 1.8]
+weight_decays = [1e-7, 5e-8]
 batch_sizes = [16]
 
 print(f'\nStep sizes = {step_sizes}')
