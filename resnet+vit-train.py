@@ -1,111 +1,87 @@
-''' Code name: cnn-train-transformer-h5-celeb.py (main code for training)'''
-
 # Author: Eraldo Pereira Marinho, Ph.D
-# About: The code imports cnn_transformer_core to allow Transformer+CNN to classify astronomical images
-# Creation: Jul 12, 2023
-#
-# This is a benchmark script to find out the optimal hyperparameters.
-#
-# Latter changes:
-# 3 Feb 2024: adapted to celebrity classification
+# About: The code imports resnet_plus_vitcore to allow Transformer+ResNet to classify celebrity images
+# Creation: October, 2023
 
 import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 import torch.optim as optim
 from torch.optim import lr_scheduler
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torchvision
+# import torchvision.transforms as transforms
 import visdom
 from utils import Visualizer
-from resnet_plus_vit_core import class_labels
-from resnet_plus_vit_core import train_dataset
-from resnet_plus_vit_core import validation_dataset
-from resnet_plus_vit_core import CelebrityClassifier, model, vit, resnet50
+from resnet_plus_vit_core import model
+from resnet_plus_vit_core import train_dataloader
+from resnet_plus_vit_core import validation_dataloader
 import os
 import torch.nn.init as init
 import numpy as np
 # from PIL import Image
 import pillow_avif
-from sklearn.metrics import confusion_matrix
+import sys
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f'PyTorch device: {device}')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"PyTorch device: {device}")
 
 viz = Visualizer.Visualizer('Celebrity Classifier', use_incoming_socket=False)
-vis = visdom.Visdom()
 
-## Define the class weight vector empirically obtained from the last run:
-## run after the classes histogram:
-#galaxies = np.float32(1/190)
-#globular = np.float32(1/109)
-#nebulae  = np.float32(1/190)
-#openclust= np.float32(1/124)
-## # run this before to have an actual class histogram
-## galaxies = np.float32(1)
-## globular = np.float32(1)
-## nebulae  = np.float32(1)
-## openclust= np.float32(1)
-#norm_denominator=galaxies + globular + nebulae + openclust
-#weight_class_0=galaxies/norm_denominator
-#weight_class_1=globular/norm_denominator
-#weight_class_2=nebulae/norm_denominator
-#weight_class_3=openclust/norm_denominator
+# Define the class weight vector empirically obtained from the last run:
+# run after the classes histogram:
+# galaxies = np.float32(1/1653)
+# globular = np.float32(1/845)
+# nebulae  = np.float32(1/1132)
+# openclust= np.float32(1/507)
+# # run this before to have an actual class histogram
+# galaxies = np.float32(1)
+# globular = np.float32(1)
+# nebulae  = np.float32(1)
+# openclust= np.float32(1)
+# norm_denominator=galaxies + globular + nebulae + openclust
+# weight_class_0=galaxies/norm_denominator
+# weight_class_1=globular/norm_denominator
+# weight_class_2=nebulae/norm_denominator
+# weight_class_3=openclust/norm_denominator
+# Instantiate the class weight tensor
+# class_weights = torch.tensor([weight_class_0, weight_class_1, weight_class_2, weight_class_3])
+# print(f"Class weights = {class_weights}")
+# Weights tensor must be converted to the adopted device
+# class_weights = class_weights.to(device)
 
-## Instantiate the class weight tensor
-#class_weights = torch.tensor([weight_class_0, weight_class_1, weight_class_2, weight_class_3])
-#print(f'Class weights = {class_weights}')
-
-## Weights tensor must be converted to the adopted device
-#class_weights = class_weights.to(device)
-
-# Ensuring reproducibility by setting a fixed seed and deterministic behavior.
-non_deterministic = False
-if not non_deterministic:
-    torch.manual_seed(3908274)
-    print('\nDeterministic training/learning\n')
-else:
-    print('\nNondeterministic training/learning\n')
-torch.backends.cudnn.deterministic = not non_deterministic
-
-def init_weights(m):
-    """ As we say in portuguese, "Isso está uma lambança!" """
-    #if isinstance(m, nn.Conv2d):
-        ## Use He initialization for convolutional layers
-        #init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-        #if m.bias is not None:
-            #init.zeros_(m.bias)
-    #elif isinstance(m, nn.Linear):
-        ## Use He initialization for linear layers as well
-        #init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
-        #if m.bias is not None:
-            #init.zeros_(m.bias)
-
-    #if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        #init.kaiming_uniform_(m.weight, nonlinearity='relu')
-
-    for layer in m.children():
-        if isinstance(layer, nn.Linear):
-            init.kaiming_normal_(layer.weight)
-
-    #if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        ## Initialize weights using Xavier uniform initialization
-        #init.xavier_uniform_(m.weight)
-
-        # Set biases to zero if they exist
-        #if m.bias is not None:
-            #init.constant_(m.bias, 0)
-
-def reset_model(model):
-    for layer in model.children():
-        if hasattr(layer, 'reset_parameters'):
-            layer.reset_parameters()
-
-# Gets the number of classes from the dataset
-num_classes = len(class_labels)
+# Training parameters
 
 num_epochs = 100
+
+initial_learning_rate = 5e-5 # Larger values caused issues
+
+# Define the loss function and optimizer
+# criterion = nn.CrossEntropyLoss(weight=class_weights)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=initial_learning_rate, weight_decay=1e-7)
+
+# Check if the pretrained file exists
+model_checkpoint = "trained_resnet_model.pth"
+if os.path.exists(model_checkpoint):
+    # Load pretrained weights
+    checkpoint = torch.load(model_checkpoint)
+    model.load_state_dict(checkpoint)
+    print(f"Pretrained weights \"{model_checkpoint}\" found.")
+else:
+    print("No pretrained weights file found. Initializing with PyTorch default weights.")
+#     # He initialization in PyTorch
+#     # Access all the linear layers (fully connected)
+#     # Ensure the model contains only layers that should be initialized with He
+#     # for layer in model.children():
+#     #     if isinstance(layer, nn.Linear):
+#     #         init.kaiming_normal_(layer.weight)
+
+# # Check the loaded weights
+# print(model.state_dict())
+
+# Move the model to the GPU device
+model.to(device)
 
 # These are basically my earling stopping proposed in previously unpublished works
 class EarlyStoppingBatch:
@@ -183,6 +159,20 @@ class EarlyStoppingAccuracy:
 
         # Stop if the loss hasn't improved for 'patience' consecutive epochs
         return plateau_count >= self.patience
+
+# Configure schedulers for dynamic learning rate adjustment.Fseed
+step_size = 10
+scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5)
+scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
+scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+
+# Set up early stopping mechanisms based on different performance metrics.
+early_stopping_batch = EarlyStoppingBatch(patience=40)
+early_stopping_valloss = EarlyStoppingValLoss(patience=10)
+early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
+
+# Move the model to the GPU device before training
+model.to(device)
 
 # Training function
 def train_and_validate(model, dataloader, validation_loader, criterion, optimizer, max_norm=2):
@@ -330,58 +320,11 @@ def validate(model, dataloader):
 
     return validation_loss, accuracy
 
-step_size = 10
-learning_rate = 5e-5
-max_norm = 2.0
-weight_decay = 1e-7
-batch_size = 16
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=non_deterministic)
-validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+# Train the ResNet+Transformer
+train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, num_epochs)
 
-# Instanciate the network model
-model = CelebrityClassifier(resnet50, vit, num_classes)
-
-# Check if the pretrained file exists
-model_checkpoint = "trained_resnet_model.pth"
-if os.path.exists(model_checkpoint):
-    # Load pretrained weights
-    checkpoint = torch.load(model_checkpoint)
-    model.load_state_dict(checkpoint)
-    print(f"Pretrained weights \"{model_checkpoint}\" found.")
-else:
-    print("No pretrained weights file found. Initializing with PyTorch default weights.")
-#     # He initialization in PyTorch
-#     # Access all the linear layers (fully connected)
-#     # Ensure the model contains only layers that should be initialized with He
-#     # for layer in model.children():
-#     #     if isinstance(layer, nn.Linear):
-#     #         init.kaiming_normal_(layer.weight)
-
-## Check the loaded weights
-#print(model.state_dict())
-
-# Move the model to the GPU.
-model.to(device)
-
-# Set up the loss function and optimizer with hyperparameters.
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-
-# Configure schedulers for dynamic learning rate adjustment.
-scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5)
-scheduler_by_accuracy = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
-scheduler_by_valloss = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
-
-# Set up early stopping mechanisms based on different performance metrics.
-early_stopping_batch = EarlyStoppingBatch(patience=40)
-early_stopping_valloss = EarlyStoppingValLoss(patience=10)
-early_stopping_accuracy = EarlyStoppingAccuracy(patience=5)
-
-# Training and validation loop with exception handling for memory issues.
-train_and_validate(model, train_dataloader, validation_dataloader, criterion, optimizer, max_norm)
-
-# Validate the ResNet+Transformer
-validate(model, validation_dataloader)
+## Validate the ResNet+Transformer
+#validate(model, validation_dataloader)
 
 # Save the trained weights
 saved_model_path = 'trained_resnet_model.pth'
@@ -395,3 +338,19 @@ print(f"Trained model saved to '{saved_model_path}'")
 # # Check the loaded weights
 # torch.save(model.state_dict(), 'pesos_lidos.pth')
 # torch.save(model.state_dict(), 'trained_resnet_model.pth')
+
+# Plot the histogram for predicted categories - an unbalanced histogram indicates low-quality training
+unique_labels = set(predicted_labels)
+print("Unique labels: ", unique_labels)
+label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
+indices = [label_to_idx[label] for label in predicted_labels]
+# print("Indices: ", indices)
+
+label_count = torch.bincount(torch.tensor(indices, dtype=torch.int64))
+
+print("Label count: ", label_count)
+
+# plt.bar(torch.arange(len(label_count)), label_count)
+# plt.xlabel('Labels')
+# plt.ylabel('Frequency')
+# plt.show()
